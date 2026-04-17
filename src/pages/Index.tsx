@@ -113,23 +113,17 @@ export default function Index() {
               <p className="text-xs text-muted-foreground mt-1">AI-powered real-estate ads</p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border/60 text-xs font-medium text-secondary-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span>Powered by Gemini Nano Banana</span>
-          </div>
         </div>
       </header>
 
       {/* Hero */}
       <section className="relative container pt-14 pb-12 md:pt-20 md:pb-16 text-center animate-fade-in">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-accent/20 text-xs font-semibold text-accent mb-5">
-          <Wand2 className="h-3.5 w-3.5" />
-          AI ad generator
-        </div>
-        <h2 className="font-display text-4xl md:text-6xl font-bold text-primary tracking-tight max-w-3xl mx-auto leading-[1.05]">
-          Beautiful real-estate ads,<br />
-          <span className="bg-gradient-primary bg-clip-text text-transparent">in one click.</span>
+        <h2 className="font-display text-4xl md:text-6xl font-bold text-blue-900 tracking-tight max-w-3xl mx-auto leading-[1.05]">
+          Beautiful real-estate ads
         </h2>
+        <div className="font-display text-black text-4xl md:text-6xl font-bold max-w-3xl mx-auto leading-[1.05]">
+          in one click.
+        </div>
         <p className="mt-5 text-muted-foreground max-w-xl mx-auto text-base md:text-lg leading-relaxed">
           Fill the form, drop in a few photos, and get a polished, share-ready advertisement in seconds.
         </p>
@@ -332,13 +326,13 @@ export default function Index() {
               )}
             </div>
 
-            <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
+            {/* <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 The backend wrapper in <code className="text-primary font-semibold">/backend</code> calls Gemini with your{" "}
                 <code className="text-primary font-semibold">GEMINI_API_KEY</code>. Deploy it and set{" "}
                 <code className="text-primary font-semibold">VITE_BACKEND_URL</code>.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </main>

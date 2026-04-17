@@ -95,6 +95,11 @@
 }
 
 @layer utilities {
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
   .bg-gradient-primary { background: var(--gradient-primary); }
   .bg-gradient-hero { background: var(--gradient-hero); }
   .bg-gradient-accent { background: var(--gradient-accent); }

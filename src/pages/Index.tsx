@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { generateAd, fileToDataUrl, type AdFormat, type GenerateAdInput } from "@/lib/api";
+import { Typewriter } from "@/components/Typewriter";
 
 const initialState: GenerateAdInput = {
   companyName: "",
@@ -109,7 +110,9 @@ export default function Index() {
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-base font-bold text-primary leading-none tracking-tight">EstateAd Studio</h1>
+              <h1 className="font-display text-base font-bold text-primary leading-none tracking-tight">
+                <Typewriter text="EstateAd Studio" speed={75} />
+              </h1>
               <p className="text-xs text-muted-foreground mt-1">AI-powered real-estate ads</p>
             </div>
           </div>

@@ -335,9 +335,19 @@ export default function Index() {
                 <p className="text-xs text-muted-foreground mt-0.5">{formatLabels[form.format]}</p>
               </div>
               {resultImage && (
-                <Button variant="accent" size="sm" onClick={downloadImage}>
-                  <Download className="h-4 w-4" /> Download
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRegenerate((v) => !v)}
+                    disabled={regenerating}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} /> Regenerate
+                  </Button>
+                  <Button variant="accent" size="sm" onClick={downloadImage}>
+                    <Download className="h-4 w-4" /> Download
+                  </Button>
+                </div>
               )}
             </div>
 

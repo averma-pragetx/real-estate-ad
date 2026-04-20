@@ -48,6 +48,8 @@ export default function Index() {
   const [form, setForm] = useState<GenerateAdInput>(initialState);
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [showRefine, setShowRefine] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState("");
 
   const update = <K extends keyof GenerateAdInput>(key: K, value: GenerateAdInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -69,22 +71,37 @@ export default function Index() {
   const removePhoto = (idx: number) =>
     update("photos", form.photos.filter((_, i) => i !== idx));
 
-  const handleGenerate = async () => {
+  const runGenerate = async (extra?: { refinePrompt?: string; previousImage?: string }) => {
     if (!form.companyName.trim() || !form.location.trim()) {
       toast.error("Please fill in at least Company Name and Location.");
       return;
     }
     setLoading(true);
-    setResultImage(null);
     try {
-      const { image } = await generateAd(form);
+      const { image } = await generateAd({ ...form, ...extra });
       setResultImage(image);
-      toast.success("Your ad is ready!");
+      toast.success(extra?.previousImage ? "Regenerated with your tweaks!" : "Your ad is ready!");
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate ad. Make sure the backend is running.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerate = async () => {
+    setResultImage(null);
+    setShowRefine(false);
+    setRefinePrompt("");
+    await runGenerate();
+  };
+
+  const handleRegenerate = async () => {
+    if (!resultImage) return;
+    if (!refinePrompt.trim()) {
+      toast.error("Add a few words describing what to change.");
+      return;
+    }
+    await runGenerate({ refinePrompt: refinePrompt.trim(), previousImage: resultImage });
   };
 
   const downloadImage = () => {

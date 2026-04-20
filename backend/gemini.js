@@ -13,21 +13,9 @@ const FORMAT_SPEC = {
   landscape: { ratio: "16:9 landscape (Facebook/web banner, 1200x675)", dims: "1200x675" },
 };
 
-function buildPrompt(input) {
-  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+function buildBaseDetails(input) {
   const highlights = (input.highlights || []).filter(Boolean);
-  const lines = [
-    `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
-    `Aesthetic: clean, modern, luxurious. White and deep navy blue color palette with subtle azure accents. Elegant typography. Generous whitespace. Soft shadows. Sophisticated, never cheap or cluttered.`,
-    ``,
-    `Compose the ad with:`,
-    `- A hero area featuring the property photo(s) provided (if any) artfully framed; if no photo, render a tasteful architectural illustration matching the property type.`,
-    `- A bold, refined headline that highlights the property's key selling point.`,
-    `- Clear, readable text blocks for: price, location, size, bed/bath count.`,
-    `- Up to 3 short bullet highlights with small icons.`,
-    `- Company branding bar at the bottom with the company name and agent contact.`,
-    ``,
-    `Property details to feature on the ad:`,
+  return [
     input.companyName && `- Company / Brand: ${input.companyName}`,
     input.agentName && `- Listing agent: ${input.agentName}`,
     input.agentPhone && `- Contact: ${input.agentPhone}`,
@@ -41,6 +29,24 @@ function buildPrompt(input) {
     highlights.length && `- Highlights: ${highlights.join(", ")}`,
     input.description && `- Description / extra notes: ${input.description}`,
     input.style && `- Style preference: ${input.style}`,
+  ].filter(Boolean);
+}
+
+function buildPrompt(input) {
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  const lines = [
+    `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
+    `Aesthetic: clean, modern, luxurious. White and deep navy blue color palette with subtle azure accents. Elegant typography. Generous whitespace. Soft shadows. Sophisticated, never cheap or cluttered.`,
+    ``,
+    `Compose the ad with:`,
+    `- A hero area featuring the property photo(s) provided (if any) artfully framed; if no photo, render a tasteful architectural illustration matching the property type.`,
+    `- A bold, refined headline that highlights the property's key selling point.`,
+    `- Clear, readable text blocks for: price, location, size, bed/bath count.`,
+    `- Up to 3 short bullet highlights with small icons.`,
+    `- Company branding bar at the bottom with the company name and agent contact.`,
+    ``,
+    `Property details to feature on the ad:`,
+    ...buildBaseDetails(input),
     ``,
     `Critical rules:`,
     `- All on-image text must be spelled exactly as given, perfectly legible, professionally typeset.`,
@@ -95,6 +101,73 @@ export async function generateAd(input) {
   for (const c of candidates) {
     const cParts = c?.content?.parts || [];
     for (const p of cParts) {
+      if (p.inlineData?.data) {
+        const mimeType = p.inlineData.mimeType || "image/png";
+        return { image: `data:${mimeType};base64,${p.inlineData.data}`, mimeType };
+      }
+    }
+  }
+  throw new Error("Gemini did not return an image. Raw response: " + JSON.stringify(json).slice(0, 500));
+}
+
+function buildRegeneratePrompt(input, refinement) {
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  const lines = [
+    `You are refining a previously generated real-estate advertisement post.`,
+    `Keep the same ${fmt.ratio} format and the original property details below — do NOT drop any information, do NOT change spelled text values (price, location, company, etc.).`,
+    `Apply the user's refinement instructions on top of the original design.`,
+    ``,
+    `Original property details (must remain accurate on the ad):`,
+    ...buildBaseDetails(input),
+    ``,
+    `User refinement instructions (apply these now):`,
+    refinement.trim(),
+    ``,
+    `Critical rules:`,
+    `- Preserve all original text values exactly as given (price, location, contact, company name, etc.).`,
+    `- Maintain the white + navy/blue palette unless the refinement explicitly asks otherwise.`,
+    `- Premium, magazine-quality, professionally typeset. No watermarks or AI artifacts.`,
+    `- Output dimensions: ${fmt.dims}.`,
+  ];
+  return lines.join("\n");
+}
+
+export async function regenerateAd({ input, refinement, previousImage }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment.");
+
+  const prompt = buildRegeneratePrompt(input, refinement);
+  const parts = [{ text: prompt }];
+
+  // Feed the previous ad first so Gemini iterates on it, then the source photos.
+  if (previousImage) {
+    const prev = dataUrlToInlinePart(previousImage);
+    if (prev) parts.push(prev);
+  }
+  for (const photo of input.photos || []) {
+    const part = dataUrlToInlinePart(photo);
+    if (part) parts.push(part);
+  }
+
+  const body = {
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseModalities: ["IMAGE"], temperature: 0.9 },
+  };
+
+  const resp = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Gemini API error ${resp.status}: ${text}`);
+  }
+
+  const json = await resp.json();
+  for (const c of json.candidates || []) {
+    for (const p of c?.content?.parts || []) {
       if (p.inlineData?.data) {
         const mimeType = p.inlineData.mimeType || "image/png";
         return { image: `data:${mimeType};base64,${p.inlineData.data}`, mimeType };

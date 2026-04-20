@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { generateAd } from "./gemini.js";
+import { generateAd, regenerateAd } from "./gemini.js";
 
 const app = express();
 app.use(cors());
@@ -15,6 +15,24 @@ app.post("/api/generate-ad", async (req, res) => {
   } catch (err) {
     console.error("[generate-ad] error:", err);
     res.status(500).json({ error: err?.message || "Generation failed" });
+  }
+});
+
+// Regenerate keeps the original listing details (same prompt base) and layers
+// the user's refinement instructions on top. Optionally accepts the previous
+// image so Gemini can iterate on it.
+app.post("/api/regenerate-ad", async (req, res) => {
+  try {
+    const { input, refinement, previousImage } = req.body || {};
+    if (!input) return res.status(400).json({ error: "Missing original input." });
+    if (!refinement || !String(refinement).trim()) {
+      return res.status(400).json({ error: "Missing refinement prompt." });
+    }
+    const result = await regenerateAd({ input, refinement, previousImage });
+    res.json(result);
+  } catch (err) {
+    console.error("[regenerate-ad] error:", err);
+    res.status(500).json({ error: err?.message || "Regeneration failed" });
   }
 });
 

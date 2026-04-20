@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Sparkles, Download, Loader2, Upload, X, ImageIcon, Wand2 } from "lucide-react";
+import { Building2, Sparkles, Download, Loader2, Upload, X, ImageIcon, Wand2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { generateAd, fileToDataUrl, type AdFormat, type GenerateAdInput } from "@/lib/api";
+import { generateAd, regenerateAd, fileToDataUrl, type AdFormat, type GenerateAdInput } from "@/lib/api";
 
 const initialState: GenerateAdInput = {
   companyName: "",
@@ -48,6 +48,10 @@ export default function Index() {
   const [form, setForm] = useState<GenerateAdInput>(initialState);
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [lastInput, setLastInput] = useState<GenerateAdInput | null>(null);
+  const [showRegenerate, setShowRegenerate] = useState(false);
+  const [refinement, setRefinement] = useState("");
+  const [regenerating, setRegenerating] = useState(false);
 
   const update = <K extends keyof GenerateAdInput>(key: K, value: GenerateAdInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -76,14 +80,41 @@ export default function Index() {
     }
     setLoading(true);
     setResultImage(null);
+    setShowRegenerate(false);
+    setRefinement("");
     try {
       const { image } = await generateAd(form);
       setResultImage(image);
+      setLastInput(form);
       toast.success("Your ad is ready!");
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate ad. Make sure the backend is running.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!lastInput || !resultImage) return;
+    if (!refinement.trim()) {
+      toast.error("Add a refinement prompt first.");
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const { image } = await regenerateAd({
+        input: lastInput,
+        refinement,
+        previousImage: resultImage,
+      });
+      setResultImage(image);
+      toast.success("Ad regenerated!");
+      setRefinement("");
+      setShowRegenerate(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to regenerate ad.");
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -304,9 +335,19 @@ export default function Index() {
                 <p className="text-xs text-muted-foreground mt-0.5">{formatLabels[form.format]}</p>
               </div>
               {resultImage && (
-                <Button variant="accent" size="sm" onClick={downloadImage}>
-                  <Download className="h-4 w-4" /> Download
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRegenerate((v) => !v)}
+                    disabled={regenerating}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} /> Regenerate
+                  </Button>
+                  <Button variant="accent" size="sm" onClick={downloadImage}>
+                    <Download className="h-4 w-4" /> Download
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -331,6 +372,48 @@ export default function Index() {
                 </div>
               )}
             </div>
+
+            {showRegenerate && resultImage && (
+              <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-accent/30 space-y-3 animate-fade-in">
+                <div>
+                  <h4 className="text-sm font-bold text-primary tracking-tight">Refine this ad</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Add extra instructions. Original listing details are kept.
+                  </p>
+                </div>
+                <Textarea
+                  placeholder="e.g. Make the headline larger, use a warmer sunset photo, add a 'NEW' badge in the top-right corner…"
+                  rows={3}
+                  value={refinement}
+                  onChange={(e) => setRefinement(e.target.value)}
+                  disabled={regenerating}
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowRegenerate(false);
+                      setRefinement("");
+                    }}
+                    disabled={regenerating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="hero" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+                    {regenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Regenerating…
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" /> Regenerate ad
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
               <p className="text-xs text-muted-foreground leading-relaxed">

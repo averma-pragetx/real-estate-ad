@@ -343,6 +343,54 @@ export default function Index() {
               )}
             </div>
 
+            {resultImage && !loading && (
+              <div className="mt-4 space-y-3">
+                {!showRefine ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowRefine(true)}
+                  >
+                    <Wand2 className="h-4 w-4" /> Regenerate with tweaks
+                  </Button>
+                ) : (
+                  <div className="space-y-2 p-4 rounded-xl bg-secondary/60 border border-border/60 animate-fade-in">
+                    <Label className="text-xs font-semibold text-primary/70 uppercase tracking-wider">
+                      What should change?
+                    </Label>
+                    <Textarea
+                      placeholder="e.g. Make the headline larger, switch to a sunset palette, emphasize the rooftop pool…"
+                      rows={3}
+                      value={refinePrompt}
+                      onChange={(e) => setRefinePrompt(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleRegenerate}
+                        disabled={loading}
+                      >
+                        <Sparkles className="h-4 w-4" /> Regenerate
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowRefine(false);
+                          setRefinePrompt("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 The backend wrapper in <code className="text-primary font-semibold">/backend</code> calls Gemini with your{" "}

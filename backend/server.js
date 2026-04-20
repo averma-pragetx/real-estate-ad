@@ -9,7 +9,7 @@ app.use(express.json({ limit: "25mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-app.post("/api/generate-ad", async (req, res) => {
+app.post("/generate-ad", async (req, res) => {
   try {
     const result = await generateAd(req.body || {});
     res.json(result);

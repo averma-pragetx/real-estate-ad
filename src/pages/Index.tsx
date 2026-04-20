@@ -48,6 +48,8 @@ export default function Index() {
   const [form, setForm] = useState<GenerateAdInput>(initialState);
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [showRefine, setShowRefine] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState("");
 
   const update = <K extends keyof GenerateAdInput>(key: K, value: GenerateAdInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -69,22 +71,37 @@ export default function Index() {
   const removePhoto = (idx: number) =>
     update("photos", form.photos.filter((_, i) => i !== idx));
 
-  const handleGenerate = async () => {
+  const runGenerate = async (extra?: { refinePrompt?: string; previousImage?: string }) => {
     if (!form.companyName.trim() || !form.location.trim()) {
       toast.error("Please fill in at least Company Name and Location.");
       return;
     }
     setLoading(true);
-    setResultImage(null);
     try {
-      const { image } = await generateAd(form);
+      const { image } = await generateAd({ ...form, ...extra });
       setResultImage(image);
-      toast.success("Your ad is ready!");
+      toast.success(extra?.previousImage ? "Regenerated with your tweaks!" : "Your ad is ready!");
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate ad. Make sure the backend is running.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerate = async () => {
+    setResultImage(null);
+    setShowRefine(false);
+    setRefinePrompt("");
+    await runGenerate();
+  };
+
+  const handleRegenerate = async () => {
+    if (!resultImage) return;
+    if (!refinePrompt.trim()) {
+      toast.error("Add a few words describing what to change.");
+      return;
+    }
+    await runGenerate({ refinePrompt: refinePrompt.trim(), previousImage: resultImage });
   };
 
   const downloadImage = () => {
@@ -325,6 +342,54 @@ export default function Index() {
                 </div>
               )}
             </div>
+
+            {resultImage && !loading && (
+              <div className="mt-4 space-y-3">
+                {!showRefine ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowRefine(true)}
+                  >
+                    <Wand2 className="h-4 w-4" /> Regenerate with tweaks
+                  </Button>
+                ) : (
+                  <div className="space-y-2 p-4 rounded-xl bg-secondary/60 border border-border/60 animate-fade-in">
+                    <Label className="text-xs font-semibold text-primary/70 uppercase tracking-wider">
+                      What should change?
+                    </Label>
+                    <Textarea
+                      placeholder="e.g. Make the headline larger, switch to a sunset palette, emphasize the rooftop pool…"
+                      rows={3}
+                      value={refinePrompt}
+                      onChange={(e) => setRefinePrompt(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleRegenerate}
+                        disabled={loading}
+                      >
+                        <Sparkles className="h-4 w-4" /> Regenerate
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowRefine(false);
+                          setRefinePrompt("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
               <p className="text-xs text-muted-foreground leading-relaxed">

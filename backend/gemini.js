@@ -109,3 +109,70 @@ export async function generateAd(input) {
   }
   throw new Error("Gemini did not return an image. Raw response: " + JSON.stringify(json).slice(0, 500));
 }
+
+function buildRegeneratePrompt(input, refinement) {
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  const lines = [
+    `You are refining a previously generated real-estate advertisement post.`,
+    `Keep the same ${fmt.ratio} format and the original property details below — do NOT drop any information, do NOT change spelled text values (price, location, company, etc.).`,
+    `Apply the user's refinement instructions on top of the original design.`,
+    ``,
+    `Original property details (must remain accurate on the ad):`,
+    ...buildBaseDetails(input),
+    ``,
+    `User refinement instructions (apply these now):`,
+    refinement.trim(),
+    ``,
+    `Critical rules:`,
+    `- Preserve all original text values exactly as given (price, location, contact, company name, etc.).`,
+    `- Maintain the white + navy/blue palette unless the refinement explicitly asks otherwise.`,
+    `- Premium, magazine-quality, professionally typeset. No watermarks or AI artifacts.`,
+    `- Output dimensions: ${fmt.dims}.`,
+  ];
+  return lines.join("\n");
+}
+
+export async function regenerateAd({ input, refinement, previousImage }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment.");
+
+  const prompt = buildRegeneratePrompt(input, refinement);
+  const parts = [{ text: prompt }];
+
+  // Feed the previous ad first so Gemini iterates on it, then the source photos.
+  if (previousImage) {
+    const prev = dataUrlToInlinePart(previousImage);
+    if (prev) parts.push(prev);
+  }
+  for (const photo of input.photos || []) {
+    const part = dataUrlToInlinePart(photo);
+    if (part) parts.push(part);
+  }
+
+  const body = {
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseModalities: ["IMAGE"], temperature: 0.9 },
+  };
+
+  const resp = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Gemini API error ${resp.status}: ${text}`);
+  }
+
+  const json = await resp.json();
+  for (const c of json.candidates || []) {
+    for (const p of c?.content?.parts || []) {
+      if (p.inlineData?.data) {
+        const mimeType = p.inlineData.mimeType || "image/png";
+        return { image: `data:${mimeType};base64,${p.inlineData.data}`, mimeType };
+      }
+    }
+  }
+  throw new Error("Gemini did not return an image. Raw response: " + JSON.stringify(json).slice(0, 500));
+}

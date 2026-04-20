@@ -48,6 +48,29 @@ export async function generateAd(input: GenerateAdInput): Promise<GenerateAdResp
   return resp.json();
 }
 
+export interface RegenerateAdInput {
+  input: GenerateAdInput;
+  refinement: string;
+  previousImage?: string | null;
+}
+
+export async function regenerateAd(payload: RegenerateAdInput): Promise<GenerateAdResponse> {
+  const resp = await fetch(`${BACKEND_URL}/api/regenerate-ad`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    let msg = `Request failed (${resp.status})`;
+    try {
+      const j = await resp.json();
+      if (j?.error) msg = j.error;
+    } catch {}
+    throw new Error(msg);
+  }
+  return resp.json();
+}
+
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

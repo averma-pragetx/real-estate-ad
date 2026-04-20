@@ -149,7 +149,7 @@ export default function Index() {
             </div>
             <div>
               {/* <h1 className="font-display text-base font-bold text-primary leading-none tracking-tight">PragetX Studio</h1> */}
-              <img className="w-50 h-5" src="/assets/logo/header_logo_black.png" alt="Logo" />
+              <img className="w-50 h-5" src="/real-estate/assets/logo/header_logo_black.png" alt="Logo" />
               <p className="text-xs text-muted-foreground mt-1">AI-powered real-estate advertisements</p>
             </div>
           </div>

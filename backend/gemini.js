@@ -44,6 +44,7 @@ function buildPrompt(input) {
     highlights.length && `- Highlights: ${highlights.join(", ")}`,
     input.description && `- Description / extra notes: ${input.description}`,
     input.style && `- Style preference: ${input.style}`,
+    input.refinePrompt && `\nUser refinement instructions for this regeneration (apply these on top of the previous image):\n${input.refinePrompt}`,
     ``,
     `Critical rules:`,
     `- All on-image text must be spelled exactly as given, perfectly legible, professionally typeset.`,

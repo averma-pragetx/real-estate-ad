@@ -20,8 +20,6 @@ export interface GenerateAdInput {
   format: AdFormat;
   style?: string;
   photos: string[]; // data URLs
-  refinePrompt?: string;
-  previousImage?: string;
 }
 
 export interface GenerateAdResponse {

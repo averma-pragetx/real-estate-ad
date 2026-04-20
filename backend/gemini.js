@@ -16,11 +16,8 @@ const FORMAT_SPEC = {
 function buildPrompt(input) {
   const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
   const highlights = (input.highlights || []).filter(Boolean);
-  const isRefine = !!input.previousImage;
   const lines = [
-    isRefine
-      ? `Refine and regenerate the previously generated real-estate advertisement post (provided as the first image) in a ${fmt.ratio} format. Keep the overall composition and branding consistent unless the user instructions below say otherwise.`
-      : `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
+    `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
     `Aesthetic: clean, modern, luxurious. White and deep navy blue color palette with subtle azure accents. Elegant typography. Generous whitespace. Soft shadows. Sophisticated, never cheap or cluttered.`,
     ``,
     `Compose the ad with:`,
@@ -44,7 +41,6 @@ function buildPrompt(input) {
     highlights.length && `- Highlights: ${highlights.join(", ")}`,
     input.description && `- Description / extra notes: ${input.description}`,
     input.style && `- Style preference: ${input.style}`,
-    input.refinePrompt && `\nUser refinement instructions for this regeneration (apply these on top of the previous image):\n${input.refinePrompt}`,
     ``,
     `Critical rules:`,
     `- All on-image text must be spelled exactly as given, perfectly legible, professionally typeset.`,
@@ -70,10 +66,6 @@ export async function generateAd(input) {
   const prompt = buildPrompt(input);
 
   const parts = [{ text: prompt }];
-  if (input.previousImage) {
-    const prev = dataUrlToInlinePart(input.previousImage);
-    if (prev) parts.push(prev);
-  }
   for (const photo of input.photos || []) {
     const part = dataUrlToInlinePart(photo);
     if (part) parts.push(part);

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import "dotenv/config";
 import { generateAd, regenerateAd } from "./gemini.js";
 
 const app = express();
@@ -38,5 +39,5 @@ app.post("/api/regenerate-ad", async (req, res) => {
 
 const PORT = process.env.PORT || 8787;
 app.listen(PORT, () => {
-  console.log(`EstateAd backend listening on http://localhost:${PORT}`);
+  console.log(`Backend listening on http://localhost:${PORT}`);
 });

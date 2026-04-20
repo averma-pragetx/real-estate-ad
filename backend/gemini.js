@@ -69,6 +69,8 @@ export async function generateAd(input) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment.");
 
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  console.log(`[generateAd] Using format: ${input.format || "default"} (${fmt.dims})`);
   const prompt = buildPrompt(input);
 
   const parts = [{ text: prompt }];
@@ -136,6 +138,8 @@ export async function regenerateAd({ input, refinement, previousImage }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set in the environment.");
 
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  console.log(`[regenerateAd] Using format: ${input.format || "default"} (${fmt.dims})`);
   const prompt = buildRegeneratePrompt(input, refinement);
   const parts = [{ text: prompt }];
 

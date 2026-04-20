@@ -118,11 +118,19 @@ export default function Index() {
     }
   };
 
+  const handleReset = () => {
+    setResultImage(null);
+    setLastInput(null);
+    setRefinement("");
+    setShowRegenerate(false);
+    toast.info("State reset. You can now change the format.");
+  };
+
   const downloadImage = () => {
     if (!resultImage) return;
     const a = document.createElement("a");
     a.href = resultImage;
-    a.download = `estatead-${Date.now()}.png`;
+    a.download = `advertisement-${Date.now()}.png`;
     a.click();
   };
 
@@ -140,29 +148,22 @@ export default function Index() {
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-base font-bold text-primary leading-none tracking-tight">EstateAd Studio</h1>
-              <p className="text-xs text-muted-foreground mt-1">AI-powered real-estate ads</p>
+              {/* <h1 className="font-display text-base font-bold text-primary leading-none tracking-tight">PragetX Studio</h1> */}
+              <img className="w-50 h-5" src="/assets/logo/header_logo_black.png" alt="Logo" />
+              <p className="text-xs text-muted-foreground mt-1">AI-powered real-estate advertisements</p>
             </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border/60 text-xs font-medium text-secondary-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span>Powered by Gemini Nano Banana</span>
           </div>
         </div>
       </header>
 
       {/* Hero */}
       <section className="relative container pt-14 pb-12 md:pt-20 md:pb-16 text-center animate-fade-in">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-accent/20 text-xs font-semibold text-accent mb-5">
-          <Wand2 className="h-3.5 w-3.5" />
-          AI ad generator
-        </div>
         <h2 className="font-display text-4xl md:text-6xl font-bold text-primary tracking-tight max-w-3xl mx-auto leading-[1.05]">
           Beautiful real-estate ads,<br />
-          <span className="bg-gradient-primary bg-clip-text text-transparent">in one click.</span>
+          <span className="bg-transparent bg-clip-text text-black">in one click.</span>
         </h2>
         <p className="mt-5 text-muted-foreground max-w-xl mx-auto text-base md:text-lg leading-relaxed">
-          Fill the form, drop in a few photos, and get a polished, share-ready advertisement in seconds.
+          Fill the form, drop in a few photos, and get a polished advertisement in seconds.
         </p>
       </section>
 
@@ -279,7 +280,7 @@ export default function Index() {
           {/* Description */}
           <Section title="Description" subtitle="Notes for the AI to weave in (optional)">
             <Textarea
-              placeholder="Spacious 3BR with floor-to-ceiling windows, freshly renovated kitchen, walking distance to subway and parks…"
+              placeholder="Spacious 3BHK with floor-to-ceiling windows, freshly renovated kitchen, walking distance to subway and parks…"
               rows={4}
               value={form.description}
               onChange={(e) => update("description", e.target.value)}
@@ -289,9 +290,15 @@ export default function Index() {
           {/* Output options */}
           <Section title="Output" subtitle="Choose format and style" last>
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Ad format">
-                <Select value={form.format} onValueChange={(v) => update("format", v as AdFormat)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+              <Field label="Ad format" subtitle={resultImage ? "Locked for current ad" : undefined}>
+                <Select 
+                  value={form.format} 
+                  onValueChange={(v) => update("format", v as AdFormat)}
+                  disabled={!!resultImage}
+                >
+                  <SelectTrigger className={resultImage ? "opacity-60 cursor-not-allowed" : ""}>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {(Object.keys(formatLabels) as AdFormat[]).map((f) => (
                       <SelectItem key={f} value={f}>{formatLabels[f]}</SelectItem>
@@ -320,7 +327,7 @@ export default function Index() {
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" /> Generate ad post
+                <Sparkles className="h-4 w-4" /> Generate Advertisement
               </>
             )}
           </Button>
@@ -337,6 +344,15 @@ export default function Index() {
               {resultImage && (
                 <div className="flex items-center gap-2">
                   <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleReset}
+                    disabled={regenerating}
+                    title="Start over with a new format"
+                  >
+                    <X className="h-4 w-4 mr-1" /> Reset
+                  </Button>
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowRegenerate((v) => !v)}
@@ -346,12 +362,12 @@ export default function Index() {
                   </Button>
                   <Button variant="accent" size="sm" onClick={downloadImage}>
                     <Download className="h-4 w-4" /> Download
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </div>
 
-            <div className={`${formatAspect[form.format]} w-full rounded-xl overflow-hidden bg-secondary border border-border flex items-center justify-center relative`}>
+            <div className={`${formatAspect[resultImage ? (lastInput?.format || form.format) : form.format]} w-full max-h-[calc(100vh-200px)] rounded-xl overflow-hidden bg-secondary/50 border border-border flex items-center justify-center relative shadow-inner`}>
               {loading && (
                 <div className="absolute inset-0 bg-gradient-to-r from-secondary via-background to-secondary bg-[length:200%_100%] animate-shimmer flex flex-col items-center justify-center gap-3 text-primary">
                   <Loader2 className="h-8 w-8 animate-spin" />
@@ -360,7 +376,11 @@ export default function Index() {
                 </div>
               )}
               {!loading && resultImage && (
-                <img src={resultImage} alt="Generated real-estate ad" className="w-full h-full object-cover animate-fade-in" />
+                <img 
+                  src={resultImage} 
+                  alt="Generated real-estate ad" 
+                  className="w-full h-full object-contain animate-fade-in" 
+                />
               )}
               {!loading && !resultImage && (
                 <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground p-8 text-center">
@@ -414,14 +434,6 @@ export default function Index() {
                 </div>
               </div>
             )}
-
-            <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                The backend wrapper in <code className="text-primary font-semibold">/backend</code> calls Gemini with your{" "}
-                <code className="text-primary font-semibold">GEMINI_API_KEY</code>. Deploy it and set{" "}
-                <code className="text-primary font-semibold">VITE_BACKEND_URL</code>.
-              </p>
-            </div>
           </div>
         </div>
       </main>
@@ -429,13 +441,16 @@ export default function Index() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, subtitle, children }: { label: string; required?: boolean; subtitle?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-semibold text-primary/70 uppercase tracking-wider">
-        {label}
-        {required && <span className="text-accent ml-0.5">*</span>}
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold text-primary/70 uppercase tracking-wider">
+          {label}
+          {required && <span className="text-accent ml-0.5">*</span>}
+        </Label>
+        {subtitle && <span className="text-[10px] text-muted-foreground italic font-medium">{subtitle}</span>}
+      </div>
       {children}
     </div>
   );

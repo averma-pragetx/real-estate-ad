@@ -1,5 +1,5 @@
 {
-  "name": "estatead-backend",
+  "name": "pragetx-studio-backend",
   "version": "1.0.0",
   "type": "module",
   "private": true,
@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.19.2"
   }
 }

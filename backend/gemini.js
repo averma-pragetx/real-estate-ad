@@ -13,6 +13,25 @@ const FORMAT_SPEC = {
   landscape: { ratio: "16:9 landscape (Facebook/web banner, 1200x675)", dims: "1200x675" },
 };
 
+function buildBaseDetails(input) {
+  const highlights = (input.highlights || []).filter(Boolean);
+  return [
+    input.companyName && `- Company / Brand: ${input.companyName}`,
+    input.agentName && `- Listing agent: ${input.agentName}`,
+    input.agentPhone && `- Contact: ${input.agentPhone}`,
+    input.listingType && `- Listing type: ${input.listingType}`,
+    input.propertyType && `- Property type: ${input.propertyType}`,
+    input.price && `- Price: ${input.price}`,
+    input.location && `- Location: ${input.location}`,
+    input.size && `- Size: ${input.size}`,
+    input.bedrooms != null && input.bedrooms !== "" && `- Bedrooms: ${input.bedrooms}`,
+    input.bathrooms != null && input.bathrooms !== "" && `- Bathrooms: ${input.bathrooms}`,
+    highlights.length && `- Highlights: ${highlights.join(", ")}`,
+    input.description && `- Description / extra notes: ${input.description}`,
+    input.style && `- Style preference: ${input.style}`,
+  ].filter(Boolean);
+}
+
 function buildPrompt(input) {
   const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
   const highlights = (input.highlights || []).filter(Boolean);

@@ -70,6 +70,10 @@ export async function generateAd(input) {
   const prompt = buildPrompt(input);
 
   const parts = [{ text: prompt }];
+  if (input.previousImage) {
+    const prev = dataUrlToInlinePart(input.previousImage);
+    if (prev) parts.push(prev);
+  }
   for (const photo of input.photos || []) {
     const part = dataUrlToInlinePart(photo);
     if (part) parts.push(part);

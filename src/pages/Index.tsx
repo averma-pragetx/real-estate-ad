@@ -373,6 +373,48 @@ export default function Index() {
               )}
             </div>
 
+            {showRegenerate && resultImage && (
+              <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-accent/30 space-y-3 animate-fade-in">
+                <div>
+                  <h4 className="text-sm font-bold text-primary tracking-tight">Refine this ad</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Add extra instructions. Original listing details are kept.
+                  </p>
+                </div>
+                <Textarea
+                  placeholder="e.g. Make the headline larger, use a warmer sunset photo, add a 'NEW' badge in the top-right corner…"
+                  rows={3}
+                  value={refinement}
+                  onChange={(e) => setRefinement(e.target.value)}
+                  disabled={regenerating}
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowRegenerate(false);
+                      setRefinement("");
+                    }}
+                    disabled={regenerating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="hero" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+                    {regenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Regenerating…
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" /> Regenerate ad
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 p-4 rounded-xl bg-secondary/60 border border-border/60">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 The backend wrapper in <code className="text-primary font-semibold">/backend</code> calls Gemini with your{" "}

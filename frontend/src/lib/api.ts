@@ -55,7 +55,7 @@ export interface RegenerateAdInput {
 }
 
 export async function regenerateAd(payload: RegenerateAdInput): Promise<GenerateAdResponse> {
-  const resp = await fetch(`${BACKEND_URL}/api/regenerate-ad`, {
+  const resp = await fetch(`${BACKEND_URL}/regenerate-ad`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

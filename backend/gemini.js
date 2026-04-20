@@ -1,17 +1,90 @@
+import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+
 // Gemini Nano Banana wrapper — image generation for real-estate ads.
-// Uses the REST endpoint so we don't need an SDK.
+// Uses the official SDK.
 //
-// Model: gemini-2.5-flash-image (a.k.a. Nano Banana)
+// Model: gemini-2.5-flash-image
 // Docs: https://ai.google.dev/gemini-api/docs/image-generation
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const FORMAT_SPEC = {
-  square: { ratio: "1:1 square (Instagram feed, 1080x1080)", dims: "1080x1080" },
-  portrait: { ratio: "4:5 portrait (Instagram, 1080x1350)", dims: "1080x1350" },
-  landscape: { ratio: "16:9 landscape (Facebook/web banner, 1200x675)", dims: "1200x675" },
+  square: { ratio: "1:1 square (Instagram feed, 1080x1080)", dims: "1080x1080", ratioValue: "1:1", sizeValue: "1080" },
+  portrait: { ratio: "4:5 portrait (Instagram, 1080x1350)", dims: "1080x1350", ratioValue: "3:4", sizeValue: "1080" }, // Google doesn't have 4:5, using 3:4 or adjusting
+  landscape: { ratio: "16:9 landscape (Facebook/web banner, 1200x675)", dims: "1200x675", ratioValue: "16:9", sizeValue: "1k" },
 };
+
+export async function generateDynamicPrompt(input, baseDetails) {
+  const openaiKey = process.env.OPENAI_KEY || process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
+    console.warn("[generateDynamicPrompt] OpenAI API key not found. Using fallback hardcoded prompt.");
+    return buildPromptFallback(input, baseDetails);
+  }
+
+  console.log(`[generateDynamicPrompt] Found OPENAI_KEY. Calling OpenAI proxy/gpt-4o-mini...`);
+  const openai = new OpenAI({ apiKey: openaiKey });
+  
+  const photoCount = (input.photos || []).length;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // or gpt-4
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert real-estate advertising copywriter and prompt engineer. Your job is to output an optimal and eye-catching prompt for an image generation model that will design a magazine-quality real estate advertisement based on the user's property details."
+        },
+        {
+          role: "user",
+          content: `Generate a highly detailed prompt to create an eye-catching, minimal, and aesthetic real-estate advertisement poster. 
+          
+          The design should be a professional graphic design layout used for real estate flyers or social media posts. It should seamlessly blend the provided property photos with elegant typography, utilizing generous whitespace and a clean, structural grid (like skewed image panels, neat columns, or a large hero background image). 
+          
+          CRITICAL INSTRUCTIONS TO INCLUDE IN YOUR OUTPUT PROMPT:
+          1. LAYOUT & DESIGN: Explicitly command the image model to arrange the ad as a professional flyer/poster. Use terms like "architectural layout", "aesthetic minimal magazine brochure", "editorial design", "clean grid", "prominent text overlays".
+          2. PHOTOS: The user provided exactly ${photoCount} reference photo(s). Command the image model to ONLY use these provided photos, integrating them into the layout (e.g., as the main background or inside stylish frames). Strongly forbid hallucinating or inventing extra rooms, exteriors, or stock photos.
+          3. BRANDING: Command the model to write the company name in elegant typography. Strictly forbid hallucinating or generating random logos/icons for the company.
+          4. HIGHLIGHTS & TEXT: Specify that the text (price, location, size, bed/bath count) should be cleanly presented with sans-serif or elegant serif fonts. Feature highlights MUST have text next to every bullet point or checkmark, strictly forbidding lone icons with no text.
+          
+          Here are the property details to incorporate exactly as written:
+          ${baseDetails.join('\n')}
+          
+          Format the output as a single, clear, comprehensive prompt string ready for the image generation model. Do not include any meta-commentary.`
+        }
+      ]
+    });
+    console.log(`[generateDynamicPrompt] OpenAI prompt generation succeeded.`);
+    return response.choices[0].message.content.trim();
+  } catch (error) {
+    console.error("[generateDynamicPrompt] Error calling OpenAI for prompt generation:", error);
+    return buildPromptFallback(input, baseDetails);
+  }
+}
+
+function buildPromptFallback(input, baseDetails) {
+  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
+  const lines = [
+    `Design an aesthetic, minimal, and premium real-estate advertisement poster/flyer in a ${fmt.ratio} format.`,
+    `Aesthetic: clean architectural layout, modern editorial design, generous whitespace, elegant typography, professional social-media or magazine brochure style.`,
+    ``,
+    `Compose the ad with a structured layout:`,
+    `- Integrate the exact provided property photos (no stock, no hallucinated rooms) in clean grid frames or as a hero background.`,
+    `- A bold, refined headline highlighting the key selling feature.`,
+    `- Neatly arranged text blocks for price, location, size, bed/bath count.`,
+    `- Highlights must have readable text next to any minimal bullet points or checkmarks.`,
+    `- Company branding bar or elegant text overlay for the company name. Do not hallucinate random logos.`,
+    ``,
+    `Property details to feature on the ad (render exactly as spelled):`,
+    ...baseDetails,
+    ``,
+    `Critical rules:`,
+    `- All text must be perfectly legible and professionally typeset.`,
+    `- Use a sophisticated color palette (e.g., white background with dark accents, or elegant full-bleed photo with white text overlays).`,
+    `- The final output must look like a high-end graphic design poster, not just simple text on a plain background.`,
+  ].filter(Boolean);
+  return lines.join("\n");
+}
 
 function buildBaseDetails(input) {
   const highlights = (input.highlights || []).filter(Boolean);
@@ -32,31 +105,6 @@ function buildBaseDetails(input) {
   ].filter(Boolean);
 }
 
-function buildPrompt(input) {
-  const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
-  const lines = [
-    `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
-    `Aesthetic: clean, modern, luxurious. White and deep navy blue color palette with subtle azure accents. Elegant typography. Generous whitespace. Soft shadows. Sophisticated, never cheap or cluttered.`,
-    ``,
-    `Compose the ad with:`,
-    `- A hero area featuring the property photo(s) provided (if any) artfully framed; if no photo, render a tasteful architectural illustration matching the property type.`,
-    `- A bold, refined headline that highlights the property's key selling point.`,
-    `- Clear, readable text blocks for: price, location, size, bed/bath count.`,
-    `- Up to 3 short bullet highlights with small icons.`,
-    `- Company branding bar at the bottom with the company name and agent contact.`,
-    ``,
-    `Property details to feature on the ad:`,
-    ...buildBaseDetails(input),
-    ``,
-    `Critical rules:`,
-    `- All on-image text must be spelled exactly as given, perfectly legible, professionally typeset.`,
-    `- Color palette is strictly white background with navy/blue typography and accents. No pink, purple, or neon.`,
-    `- No watermarks, no stock-photo overlays, no AI artifacts.`,
-    `- The final output must look like a real ad designed by a top-tier real-estate marketing agency.`,
-    `- Output dimensions: ${fmt.dims}.`,
-  ].filter(Boolean);
-  return lines.join("\n");
-}
 
 function dataUrlToInlinePart(dataUrl) {
   // "data:image/jpeg;base64,XXXX" -> { inlineData: { mimeType, data } }
@@ -71,45 +119,60 @@ export async function generateAd(input) {
 
   const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
   console.log(`[generateAd] Using format: ${input.format || "default"} (${fmt.dims})`);
-  const prompt = buildPrompt(input);
+  
+  console.log(`[generateAd] Gathering details and requesting dynamic prompt from OpenAI...`);
+  const baseDetails = buildBaseDetails(input);
+  const aiGeneratedPromptText = await generateDynamicPrompt(input, baseDetails);
+  
+  console.log(`[generateAd] Prompt obtained. Final prompt length: ${aiGeneratedPromptText.length} chars.`);
+  // console.log(`[generateAd] Prompt preview:\n${aiGeneratedPromptText}`);
 
-  const parts = [{ text: prompt }];
-  for (const photo of input.photos || []) {
+  // Up to 14 reference images allowed
+  const maxImages = Math.min((input.photos || []).length, 14);
+  console.log(`[generateAd] Proceeding to call Gemini with ${maxImages} reference images...`);
+
+  const parts = [{ text: aiGeneratedPromptText }];
+  for (let i = 0; i < maxImages; i++) {
+    const photo = input.photos[i];
     const part = dataUrlToInlinePart(photo);
     if (part) parts.push(part);
   }
 
-  const body = {
-    contents: [{ role: "user", parts }],
-    generationConfig: {
-      responseModalities: ["IMAGE"],
-      temperature: 0.85,
-    },
-  };
+  const ai = new GoogleGenAI({ apiKey });
 
-  const resp = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: parts,
+      config: {
+        responseModalities: ["IMAGE"],
+        imageConfig: {
+          aspectRatio: fmt.ratioValue || "1:1",
+          imageSize: "2K"
+        }
+      }
+    });
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Gemini API error ${resp.status}: ${text}`);
+    console.log(`[generateAd] Received response from Gemini. Processing image...`);
+    return getFirstImageFromResponse(response);
+  } catch (error) {
+    console.error(`[generateAd] Error calling Gemini instance:`, error);
+    throw error;
   }
+}
 
-  const json = await resp.json();
-  const candidates = json.candidates || [];
-  for (const c of candidates) {
-    const cParts = c?.content?.parts || [];
-    for (const p of cParts) {
-      if (p.inlineData?.data) {
-        const mimeType = p.inlineData.mimeType || "image/png";
-        return { image: `data:${mimeType};base64,${p.inlineData.data}`, mimeType };
+function getFirstImageFromResponse(response) {
+  // Use official SDK response object
+  if (response?.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        const mimeType = part.inlineData.mimeType || "image/png";
+        return { image: `data:${mimeType};base64,${part.inlineData.data}`, mimeType };
       }
     }
   }
-  throw new Error("Gemini did not return an image. Raw response: " + JSON.stringify(json).slice(0, 500));
+  
+  throw new Error("Gemini did not return an image. No inlineData found in response.");
 }
 
 function buildRegeneratePrompt(input, refinement) {
@@ -148,35 +211,26 @@ export async function regenerateAd({ input, refinement, previousImage }) {
     const prev = dataUrlToInlinePart(previousImage);
     if (prev) parts.push(prev);
   }
-  for (const photo of input.photos || []) {
+  const maxImages = Math.min((input.photos || []).length, 13); // we have previousImage as one, so keep 13 max.
+  for (let i = 0; i < maxImages; i++) {
+    const photo = input.photos[i];
     const part = dataUrlToInlinePart(photo);
     if (part) parts.push(part);
   }
 
-  const body = {
-    contents: [{ role: "user", parts }],
-    generationConfig: { responseModalities: ["IMAGE"], temperature: 0.9 },
-  };
+  const ai = new GoogleGenAI({ apiKey });
 
-  const resp = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Gemini API error ${resp.status}: ${text}`);
-  }
-
-  const json = await resp.json();
-  for (const c of json.candidates || []) {
-    for (const p of c?.content?.parts || []) {
-      if (p.inlineData?.data) {
-        const mimeType = p.inlineData.mimeType || "image/png";
-        return { image: `data:${mimeType};base64,${p.inlineData.data}`, mimeType };
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: parts, // format according to @google/genai examples.
+    config: {
+      responseModalities: ["IMAGE"],
+      imageConfig: {
+        aspectRatio: fmt.ratioValue || "1:1",
+        imageSize: "2K"
       }
     }
-  }
-  throw new Error("Gemini did not return an image. Raw response: " + JSON.stringify(json).slice(0, 500));
+  });
+
+  return getFirstImageFromResponse(response);
 }

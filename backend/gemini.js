@@ -34,7 +34,6 @@ function buildBaseDetails(input) {
 
 function buildPrompt(input) {
   const fmt = FORMAT_SPEC[input.format] || FORMAT_SPEC.square;
-  const highlights = (input.highlights || []).filter(Boolean);
   const lines = [
     `Design a premium, magazine-quality real-estate advertisement post in a ${fmt.ratio} format.`,
     `Aesthetic: clean, modern, luxurious. White and deep navy blue color palette with subtle azure accents. Elegant typography. Generous whitespace. Soft shadows. Sophisticated, never cheap or cluttered.`,
@@ -47,19 +46,7 @@ function buildPrompt(input) {
     `- Company branding bar at the bottom with the company name and agent contact.`,
     ``,
     `Property details to feature on the ad:`,
-    input.companyName && `- Company / Brand: ${input.companyName}`,
-    input.agentName && `- Listing agent: ${input.agentName}`,
-    input.agentPhone && `- Contact: ${input.agentPhone}`,
-    input.listingType && `- Listing type: ${input.listingType}`,
-    input.propertyType && `- Property type: ${input.propertyType}`,
-    input.price && `- Price: ${input.price}`,
-    input.location && `- Location: ${input.location}`,
-    input.size && `- Size: ${input.size}`,
-    input.bedrooms != null && input.bedrooms !== "" && `- Bedrooms: ${input.bedrooms}`,
-    input.bathrooms != null && input.bathrooms !== "" && `- Bathrooms: ${input.bathrooms}`,
-    highlights.length && `- Highlights: ${highlights.join(", ")}`,
-    input.description && `- Description / extra notes: ${input.description}`,
-    input.style && `- Style preference: ${input.style}`,
+    ...buildBaseDetails(input),
     ``,
     `Critical rules:`,
     `- All on-image text must be spelled exactly as given, perfectly legible, professionally typeset.`,

@@ -32,7 +32,7 @@ const BACKEND_URL =
   "http://localhost:8787";
 
 export async function generateAd(input: GenerateAdInput): Promise<GenerateAdResponse> {
-  const resp = await fetch(`${BACKEND_URL}/api/generate-ad`, {
+  const resp = await fetch(`${BACKEND_URL}/generate-ad`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

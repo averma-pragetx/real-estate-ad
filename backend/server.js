@@ -22,7 +22,7 @@ app.post("/api/generate-ad", async (req, res) => {
 // Regenerate keeps the original listing details (same prompt base) and layers
 // the user's refinement instructions on top. Optionally accepts the previous
 // image so Gemini can iterate on it.
-app.post("/api/regenerate-ad", async (req, res) => {
+app.post("/regenerate-ad", async (req, res) => {
   try {
     const { input, refinement, previousImage } = req.body || {};
     if (!input) return res.status(400).json({ error: "Missing original input." });

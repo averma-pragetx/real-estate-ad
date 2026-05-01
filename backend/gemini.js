@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
+import { getEncoding } from "js-tiktoken";
 
 // Gemini Nano Banana wrapper — image generation for real-estate ads.
 // Uses the official SDK.
@@ -27,17 +28,8 @@ export async function generateDynamicPrompt(input, baseDetails) {
   
   const photoCount = (input.photos || []).length;
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // or gpt-4
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert real-estate advertising copywriter and prompt engineer. Your job is to output an optimal and eye-catching prompt for an image generation model that will design a magazine-quality real estate advertisement based on the user's property details."
-        },
-        {
-          role: "user",
-          content: `Generate a highly detailed prompt to create an eye-catching, minimal, and aesthetic real-estate advertisement poster. 
+  const systemMessage = "You are an expert real-estate advertising copywriter and prompt engineer. Your job is to output an optimal and eye-catching prompt for an image generation model that will design a magazine-quality real estate advertisement based on the user's property details.";
+  const userMessage = `Generate a highly detailed prompt to create an eye-catching, minimal, and aesthetic real-estate advertisement poster. 
           
           The design should be a professional graphic design layout used for real estate flyers or social media posts. It should seamlessly blend the provided property photos with elegant typography, utilizing generous whitespace and a clean, structural grid (like skewed image panels, neat columns, or a large hero background image). 
           
@@ -50,15 +42,33 @@ export async function generateDynamicPrompt(input, baseDetails) {
           Here are the property details to incorporate exactly as written:
           ${baseDetails.join('\n')}
           
-          Format the output as a single, clear, comprehensive prompt string ready for the image generation model. Do not include any meta-commentary.`
-        }
+          Format the output as a single, clear, comprehensive prompt string ready for the image generation model. Do not include any meta-commentary.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: userMessage }
       ]
     });
+
+    let openaiTokens = 0;
+    try {
+      const enc = getEncoding("o200k_base");
+      const promptTokens = enc.encode(systemMessage).length + enc.encode(userMessage).length;
+      const completionTokens = enc.encode(response.choices[0].message.content).length;
+      openaiTokens = promptTokens + completionTokens;
+    } catch (tokenErr) {
+      console.warn("[OpenAI Token Count] Failed to count tokens:", tokenErr.message);
+    }
+
     console.log(`[generateDynamicPrompt] OpenAI prompt generation succeeded.`);
-    return response.choices[0].message.content.trim();
+    return { text: response.choices[0].message.content.trim(), tokens: openaiTokens };
   } catch (error) {
     console.error("[generateDynamicPrompt] Error calling OpenAI for prompt generation:", error);
-    return buildPromptFallback(input, baseDetails);
+    const fallback = buildPromptFallback(input, baseDetails);
+    return { text: fallback, tokens: 0 };
   }
 }
 
@@ -122,7 +132,7 @@ export async function generateAd(input) {
   
   console.log(`[generateAd] Gathering details and requesting dynamic prompt from OpenAI...`);
   const baseDetails = buildBaseDetails(input);
-  const aiGeneratedPromptText = await generateDynamicPrompt(input, baseDetails);
+  const { text: aiGeneratedPromptText, tokens: openaiTokens } = await generateDynamicPrompt(input, baseDetails);
   
   console.log(`[generateAd] Prompt obtained. Final prompt length: ${aiGeneratedPromptText.length} chars.`);
   // console.log(`[generateAd] Prompt preview:\n${aiGeneratedPromptText}`);
@@ -139,6 +149,19 @@ export async function generateAd(input) {
   }
 
   const ai = new GoogleGenAI({ apiKey });
+
+  let geminiTokens = 0;
+  try {
+    const { totalTokens } = await ai.models.countTokens({ 
+      model: GEMINI_MODEL,
+      contents: [{ role: "user", parts }] 
+    });
+    geminiTokens = totalTokens;
+  } catch (tokenErr) {
+    console.warn("[Gemini Token Count] Failed to count tokens:", tokenErr.message);
+  }
+
+  console.log(`[Usage Stats] OpenAI: ${openaiTokens} tokens | Gemini: ${geminiTokens} tokens | Total: ${openaiTokens + geminiTokens}`);
 
   try {
     const response = await ai.models.generateContent({
@@ -219,6 +242,19 @@ export async function regenerateAd({ input, refinement, previousImage }) {
   }
 
   const ai = new GoogleGenAI({ apiKey });
+
+  let geminiTokens = 0;
+  try {
+    const { totalTokens } = await ai.models.countTokens({ 
+      model: GEMINI_MODEL,
+      contents: [{ role: "user", parts }] 
+    });
+    geminiTokens = totalTokens;
+  } catch (tokenErr) {
+    console.warn("[Gemini Token Count] Failed to count tokens:", tokenErr.message);
+  }
+
+  console.log(`[Usage Stats] OpenAI: 0 tokens (local prompt) | Gemini: ${geminiTokens} tokens | Total: ${geminiTokens}`);
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL,
